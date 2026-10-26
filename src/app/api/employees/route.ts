@@ -82,6 +82,26 @@ export async function POST(request: Request) {
     const admin = createAdminClient()
     const tempPassword = generateTempPassword(10)
 
+    // One login per work email — reject duplicates before creating the auth
+    // user (which reuse of the same email would otherwise silently duplicate).
+    const normalisedEmail = email?.trim().toLowerCase()
+    const { data: existingEmployee } = await admin
+      .from("employees")
+      .select("id")
+      .eq("work_email", normalisedEmail)
+      .maybeSingle()
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("email", normalisedEmail)
+      .maybeSingle()
+    if (existingEmployee || existingProfile) {
+      return NextResponse.json(
+        { error: "An account already exists with this email. Reset their password instead of creating a new account." },
+        { status: 409 }
+      )
+    }
+
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email: email.trim().toLowerCase(),
       password: tempPassword,

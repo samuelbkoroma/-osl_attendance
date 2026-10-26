@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Callout } from "@/components/ui/callout"
 import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Check, Circle, ShieldCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { homeForRole } from "@/lib/navigation"
 
 function Requirement({ met, children }: { met: boolean; children: React.ReactNode }) {
   return (
@@ -23,7 +24,7 @@ function Requirement({ met, children }: { met: boolean; children: React.ReactNod
 
 export default function ChangePasswordPage() {
   const router = useRouter()
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, refreshSession } = useAuth()
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -62,10 +63,11 @@ export default function ChangePasswordPage() {
       const data = await res.json()
       if (res.ok) {
         setSuccess(true)
-        setTimeout(() => {
-          router.push("/")
-          router.refresh()
-        }, 1800)
+        // Pull must_change_password:false + latest role into the auth context,
+        // then navigate straight to this user's dashboard — no timer, no
+        // full-page refresh through "/".
+        const profile = await refreshSession()
+        router.replace(homeForRole(profile?.role ?? user?.role))
       } else {
         setError(data.error || "Failed to change password")
       }

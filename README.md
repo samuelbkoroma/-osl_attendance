@@ -15,7 +15,8 @@ line-manager chain by email and in-app notification.
   email-outbox console.
 - **Alerts** — every self-service clock-in/out immediately notifies active HR
   and the employee's line manager in-app and by email, including the captured
-  location. When someone is absent at the cutoff, the HR director(s) and each
+  location. When someone is absent at the cutoff, the HR dire
+  ctor(s) and each
   manager up the reporting chain (until a Director/CEO) are notified too. A
   daily attendance digest is emailed to HR directors.
 - **Recovery** — staff can reset a forgotten password from the login page by

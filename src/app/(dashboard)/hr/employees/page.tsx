@@ -55,6 +55,7 @@ import {
 import { canManageSettings } from "@/lib/navigation"
 import { useAuth } from "@/providers/auth-provider"
 import { downloadCSV } from "@/lib/export"
+import { ImportDialog } from "./import-dialog"
 import { freeTownDate } from "@/lib/attendance"
 import {
   Users,
@@ -67,6 +68,7 @@ import {
   Copy,
   Check,
   FileDown,
+  FileUp,
   FilterX,
   Mail,
   Phone,
@@ -108,6 +110,7 @@ export default function HrEmployeesPage() {
   const schedules = useSchedules(true)
 
   const [addOpen, setAddOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [detail, setDetail] = useState<Employee | null>(null)
   const [credentials, setCredentials] = useState<IssuedEmployee | null>(null)
 
@@ -320,16 +323,16 @@ export default function HrEmployeesPage() {
             Export CSV
           </Button>
           {isAdmin && (
-            <Button
-              size="sm"
-              onClick={() => {
-                resetAddForm()
-                setAddOpen(true)
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add employee
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                <FileUp className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+              <Button size="sm" onClick={() => { resetAddForm(); setAddOpen(true) }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add employee
+              </Button>
+            </div>
           )}
         </PageHeader>
 
@@ -608,6 +611,13 @@ export default function HrEmployeesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Import employees */}
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => employees.refetch()}
+      />
 
       {/* Add employee */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>

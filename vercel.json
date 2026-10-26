@@ -4,14 +4,7 @@
     {
       "path": "/api/cron/cutoff-report",
       "schedule": "45 8 * * *"
-    },
-    {
-      "path": "/api/cron/cutoff-report",
-      "schedule": "50 8 * * *"
-    },
-    {
-      "path": "/api/cron/drain-email",
-      "schedule": "*/10 * * * *"
     }
   ]
 }
+

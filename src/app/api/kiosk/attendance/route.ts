@@ -7,6 +7,7 @@ interface KioskEmployee {
   employee_no: string
   full_name: string
   job_title: string | null
+  user_id?: string | null
   profile: { avatar_url: string | null } | null
   branch: { id: string; name: string } | null
 }
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
     // Resolve the employee (id takes precedence if both are somehow sent).
     let empQuery = admin
       .from("employees")
-      .select("id, employee_no, full_name, job_title, profile:profiles(avatar_url), branch:branches(id, name)")
+      .select("id, employee_no, full_name, job_title, user_id, branch:branches(id, name)")
     if (resolvedId) {
       empQuery = empQuery.eq("id", resolvedId)
     } else if (resolvedNo) {
@@ -79,10 +80,33 @@ export async function POST(request: Request) {
     }
 
     const { data: employeeRow, error: empErr } = await empQuery.maybeSingle()
-    const employee = employeeRow as KioskEmployee | null
-
-    if (empErr || !employee) {
+    if (empErr || !employeeRow) {
       return NextResponse.json({ error: "Employee not found or inactive" }, { status: 404 })
+    }
+
+    let avatarUrl: string | null = null
+    if (employeeRow.user_id) {
+      const { data: prof } = await admin
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", employeeRow.user_id)
+        .maybeSingle()
+      avatarUrl = prof?.avatar_url ?? null
+    }
+
+    const rawBranch = employeeRow.branch
+    const branchObj = Array.isArray(rawBranch)
+      ? (rawBranch[0] as { id: string; name: string } | undefined) ?? null
+      : (rawBranch as { id: string; name: string } | null)
+
+    const employee: KioskEmployee = {
+      id: employeeRow.id,
+      employee_no: employeeRow.employee_no,
+      full_name: employeeRow.full_name,
+      job_title: employeeRow.job_title,
+      user_id: employeeRow.user_id,
+      branch: branchObj,
+      profile: avatarUrl ? { avatar_url: avatarUrl } : null,
     }
 
     // Call the service-role RPC which enforces business rules and writes the

@@ -62,8 +62,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T
 // is stable regardless of how the constraint was named.
 const EMPLOYEE_SELECT =
   "*, branch:branches!branch_id(*), department:departments(*), team:teams!team_id(*), " +
-  "schedule:work_schedules(*), manager:employees!manager_id(id, full_name, employee_no, job_title, rank, work_email), " +
-  "profile:profiles!employees_user_id_profile_fkey(*)"
+  "schedule:work_schedules(*), manager:employees!manager_id(id, full_name, employee_no, job_title, rank, work_email)"
 
 const ATTENDANCE_SELECT =
   "*, employee:employees(" + EMPLOYEE_SELECT + "), branch:branches(*), schedule:work_schedules(*)"
@@ -241,6 +240,26 @@ export interface EmployeeFilters {
   limit?: number
 }
 
+async function attachProfiles(supabase: Supabase, emps: Employee[]): Promise<Employee[]> {
+  const userIds = emps.map((e) => e.user_id).filter(Boolean) as string[]
+  if (userIds.length === 0) return emps
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, role, is_active, avatar_url")
+    .in("id", userIds)
+
+  if (profiles && profiles.length > 0) {
+    const profileMap = new Map(profiles.map((p) => [p.id, p]))
+    for (const emp of emps) {
+      if (emp.user_id && profileMap.has(emp.user_id)) {
+        emp.profile = profileMap.get(emp.user_id) as Profile
+      }
+    }
+  }
+  return emps
+}
+
 export async function getEmployees(filters: EmployeeFilters = {}): Promise<Employee[]> {
   const supabase = getClient()
   let query = supabase.from("employees").select(EMPLOYEE_SELECT).order("full_name")
@@ -256,13 +275,16 @@ export async function getEmployees(filters: EmployeeFilters = {}): Promise<Emplo
     query = query.or(`full_name.ilike.*${q}*,work_email.ilike.*${q}*,employee_no.ilike.*${q}*,job_title.ilike.*${q}*`)
   }
 
-  return (await unwrap(query)) as Employee[]
+  const emps = (await unwrap(query)) as Employee[]
+  return await attachProfiles(supabase, emps)
 }
 
 export async function getEmployeeById(id: string): Promise<Employee | null> {
   const supabase = getClient()
   const { data } = await supabase.from("employees").select(EMPLOYEE_SELECT).eq("id", id).maybeSingle()
-  return data as Employee | null
+  if (!data) return null
+  const [emp] = await attachProfiles(supabase, [data as unknown as Employee])
+  return emp ?? null
 }
 
 export async function getMyEmployee(
